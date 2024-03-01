@@ -1,0 +1,6 @@
+galaxy_info:
+  role_name: patroni
+  author: mister-sudo
+  description: Patroni installation (with consul support)
+  license: BSD
+dependencies: []

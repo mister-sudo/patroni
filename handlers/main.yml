@@ -1,0 +1,23 @@
+---
+
+- name: Restart patroni-watchdog
+  systemd:
+    name: patroni-watchdog
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+  notify:
+    - Restart watchdog
+
+- name: Restart watchdog
+  systemd:
+    name: watchdog
+    state: restarted
+    enabled: yes
+
+- name: Restart patroni
+  systemd:
+    name: patroni.service
+    state: restarted
+    daemon_reload: yes
+    enabled: yes

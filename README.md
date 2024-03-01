@@ -1,1 +1,1 @@
-# patroni
+# Ansible role patroni

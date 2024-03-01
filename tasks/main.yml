@@ -1,0 +1,90 @@
+---
+
+- name: Install watchdog for patroni
+  block:
+
+    - name: Create udev rule for watchdog
+      copy:
+        content: 'KERNEL=="{{ patroni_watchdog_device |basename }}", OWNER="{{ patroni_system_user }}", GROUP="{{ patroni_system_group }}", MODE="0600"'
+        dest: /etc/udev/rules.d/60-watchdog.rules
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Install watchdog
+      package:
+        name: watchdog
+        update_cache: yes
+
+    - name: Make kernel watchdog device available for patroni
+      template:
+        src: patroni-watchdog.service.j2
+        dest: /etc/systemd/system/patroni-watchdog.service
+        owner: root
+        group: root
+        mode: 0644
+      notify:
+        - Restart patroni-watchdog
+
+  when: patroni_watchdog_mode in ('automatic', 'required')
+
+- name: Install packages required for Patroni
+  become: true
+  apt: name='{{item}}' state=latest
+  loop:
+    - python3-pip
+    - jq
+
+- name: Install required Python packages for Patroni
+  become: true
+  pip: name='{{ item }}' state=latest
+  loop:
+    - psycopg2=={{ patroni_psycopg2_version }}
+    - setuptools
+    - patroni[consul]=={{ patroni_version }}
+
+- name: Create patroni config directory
+  file:
+    path: '{{ patroni_config_dir }}'
+    state: directory
+    owner: '{{ patroni_system_user }}'
+    group: '{{ patroni_system_group }}'
+    mode: 0750
+
+- name: Create patroni log directory
+  file:
+    path: '{{ patroni_log_dir }}'
+    state: directory
+    owner: '{{ patroni_system_user }}'
+    group: '{{ patroni_system_group }}'
+    mode: 0750
+  when: patroni_log_destination | default('stderr', true) != 'stderr'
+
+- name: Prepare callback scripts
+  copy:
+    src: '{{ item.source }}'
+    dest: '{{ item.target }}'
+    owner: '{{ patroni_system_user }}'
+    group: '{{ patroni_system_group }}'
+    mode: 0750
+    backup: yes
+  loop: '{{ patroni_postgresql_callbacks }}'
+  when: not( (item.target is none) or (item.target | trim | length == 0) )
+
+- name: Create patroni systemd script
+  template:
+    src: patroni.systemd.j2
+    dest: /etc/systemd/system/patroni.service
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Create patroni configuration file
+  template:
+    src: patroni.yml.j2
+    dest: '{{ patroni_config_dir }}/{{ patroni_name|default(ansible_hostname) }}.yml'
+    owner: '{{ patroni_system_user }}'
+    group: '{{ patroni_system_group }}'
+    mode: 0600
+  notify:
+    - Restart patroni
