@@ -36,7 +36,7 @@ patroni_replication_password: repuserpasswd
 patroni_superuser_username: postgres
 patroni_superuser_password: supersecretpostgrespasswd
 
-patroni_postgresql_version: 12
+patroni_postgresql_version: 13
 patroni_exec_start_pre: '/bin/mkdir -m 2750 -p /var/run/postgresql/{{ patroni_postgresql_version }}-main.pg_stat_tmp'
 
 patroni_service_restart: on-failure # no, always, on-success, on-failure, on-abnormal, on-abort, on-watchdog
